@@ -1,5 +1,5 @@
 STUID = 221220000
-STUNAME = 张三
+STUNAME = season
 
 # DO NOT modify the following code!!!
 
