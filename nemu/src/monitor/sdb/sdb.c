@@ -17,7 +17,9 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <stdio.h>
 #include "sdb.h"
+#include <memory/vaddr.h>
 
 static int is_batch_mode = false;
 
@@ -49,7 +51,50 @@ static int cmd_c(char *args) {
 
 
 static int cmd_q(char *args) {
+  set_nemu_state(NEMU_QUIT, 0, -1);
   return -1;
+}
+
+static int cmd_i(char * args) {
+    uint64_t n;
+    if (sscanf(args, "%lu",&n) < 0) {
+        printf("wrong args for si command %s", args);
+        return -1;
+    }
+    //printf("exec %lu steps", n);
+    cpu_exec(n);
+    return 0;
+}
+
+static int cmd_info(char * args) {
+    if (strcmp("r",args) == 0) {
+        isa_reg_display();
+    }
+
+    return 0;
+}
+
+static int cmd_x(char * args) {
+    uint32_t n;
+    vaddr_t p;
+    if (sscanf(args,"%u %x", &n, &p) < 0){
+        printf("wrong args for x command %s", args);
+        return -1;
+    }
+//    printf("%d %d", n, p);
+    for(int i = 0; i < n; i++) {
+        if (i % 8 == 0) {
+            printf("%s%x:","0x", p+i);
+        }
+        printf("%10x", vaddr_read(p+i, 4));
+
+        if (i % 8 == 7) {
+            printf("\n");
+        }
+    }
+
+    printf("\n");
+    return 0;
 }
 
 static int cmd_help(char *args);
@@ -61,6 +106,9 @@ static struct {
 } cmd_table [] = {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
+  { "si", "exec n instructions of the program", cmd_i },
+  { "info", "print info the cpu registers, etc.", cmd_info },
+  { "x", "exam the memory contents", cmd_x },
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
