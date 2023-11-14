@@ -17,6 +17,7 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "sdb.h"
 #include <memory/vaddr.h>
@@ -74,6 +75,20 @@ static int cmd_info(char * args) {
     return 0;
 }
 
+static int cmd_p(char * args) {
+    bool succ = true;
+    int res =  expr(args, &succ);
+
+    if(succ) {
+        printf("$1 : %d\n", res);
+        return 0;
+    }else {
+        printf("wrong expression");
+        return -1;
+    }
+
+}
+
 static int cmd_x(char * args) {
     uint32_t n;
     vaddr_t p;
@@ -109,6 +124,7 @@ static struct {
   { "si", "exec n instructions of the program", cmd_i },
   { "info", "print info the cpu registers, etc.", cmd_info },
   { "x", "exam the memory contents", cmd_x },
+  { "p", "print value of expression", cmd_p },
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
