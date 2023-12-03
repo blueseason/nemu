@@ -25,13 +25,18 @@
 
 enum {
   TK_DECIMAL = 16,
+  TK_HEX,
+  TK_REG = 32,
   TK_NOTYPE = 256,
+  TK_AND,
   TK_EQ,
+  TK_NOT_EQ,
   TK_PLUS,
   TK_MINUS,
   TK_MULTIPLY,
   TK_DIVIDE,
   TK_NEGTIVE,
+  TK_DEREF,
   TK_LEFT_PA,
   TK_RIGHT_PA,
   /* TODO: Add more token types */
@@ -48,14 +53,18 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
+  {"&&", TK_AND},    // spaces
+  {"==", TK_EQ},    // equal
+  {"!=", TK_NOT_EQ}, // not equal
   {"\\+", TK_PLUS},         // plus
-  {"==", TK_EQ},        // equal
   {"\\-",TK_MINUS},
   {"\\*", TK_MULTIPLY},
   {"/", TK_DIVIDE},
   {"\\(", TK_LEFT_PA},
   {"\\)", TK_RIGHT_PA},
+  {"0x[[:xdigit:]]+",TK_HEX},
   {"[[:digit:]]+",TK_DECIMAL},
+  {"$\\w+",TK_REG},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -113,6 +122,8 @@ static bool make_token(char *e) {
 
         switch (rules[i].token_type) {
           case TK_NOTYPE: break;
+          case TK_REG:
+          case TK_HEX:
           case TK_DECIMAL: Assert(substr_len <= 32, "%s", "tokens len over flow");
              strncpy(tokens[nr_token].str, substr_start,substr_len);
           default: tokens[nr_token].type = rules[i].token_type;
@@ -135,6 +146,10 @@ static bool make_token(char *e) {
           || (tokens[i].type == TK_MINUS && tokens[i-1].type >= TK_PLUS
               && tokens[i-1].type <= TK_NEGTIVE)){
           tokens[i].type = TK_NEGTIVE;
+      }
+
+      if (tokens[i].type == '*' && (i == 0 || tokens[i - 1].type < TK_HEX) ) {
+          tokens[i].type = TK_DEREF;
       }
   }
   return true;
@@ -204,8 +219,18 @@ uint32_t eval(Token* tokens,int p, int q, bool *succ) {
      * Return the value of the number.
      */
 
+    if (tokens[p].type == TK_REG) {
+        bool succ = true;
+        word_t res = isa_reg_str2val(tokens[p].str, & succ);
+
+        if(! succ) Assert(-1, "bad register name");
+
+        return res;
+    }
+    char * format = "%d";
+    if (tokens[p].type == TK_HEX) format = "%x";
     uint32_t num = 0;
-    if (sscanf(tokens[p].str, "%d", &num) < 0){
+    if (sscanf(tokens[p].str, format, &num) < 0){
         Assert(-1,"wrong args for eval numbers %s", tokens[p].str);
     }
 
@@ -230,6 +255,9 @@ uint32_t eval(Token* tokens,int p, int q, bool *succ) {
         case TK_MINUS: return val1 - val2;
         case TK_MULTIPLY: return val1 * val2;
         case TK_DIVIDE: return val1 / val2;
+        case TK_AND: return val1 && val2;
+        case TK_EQ:  return val1 == val2;
+        case TK_NOT_EQ: return val1 != val2;
         default: assert(0);
       }
     }

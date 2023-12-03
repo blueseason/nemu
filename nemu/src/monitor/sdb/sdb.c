@@ -70,6 +70,8 @@ static int cmd_i(char * args) {
 static int cmd_info(char * args) {
     if (strcmp("r",args) == 0) {
         isa_reg_display();
+    }else if(strcmp("w", args)==0) {
+        display_wp();
     }
 
     return 0;
@@ -87,6 +89,26 @@ static int cmd_p(char * args) {
         return -1;
     }
 
+}
+
+static int cmd_w(char * args) {
+    WP* wp = new_wp(args);
+    if (wp != NULL) {
+        printf("Set Watchpoints %d\nexpr = %10s\nOld value = %10x\n",
+               wp->NO, wp->expr, wp->value);
+    }
+    return 0;
+}
+
+static int cmd_d(char * args) {
+    int n;
+    if (sscanf(args, "%d",&n) < 0) {
+        printf("wrong args for delete watch piont command %s", args);
+        return -1;
+    }
+
+    delete_wp(n);
+    return 0;
 }
 
 static int cmd_x(char * args) {
@@ -125,6 +147,8 @@ static struct {
   { "info", "print info the cpu registers, etc.", cmd_info },
   { "x", "exam the memory contents", cmd_x },
   { "p", "print value of expression", cmd_p },
+  { "w", "set a watchpiont of expression", cmd_w },
+  { "d", "delete a watchpiont by id ", cmd_d },
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
